@@ -1,0 +1,45 @@
+# Erlang/OTP
+.eunit
+deps
+*.o
+*.beam
+*.plt
+erl_crash.dump
+ebin/*.beam
+rel/example_project
+.concrete/DEV_MODE
+.rebar
+_build/
+rebar3.crashdump
+*~
+
+# Rebar3
+.rebar3
+_checkouts/
+_vendor/
+
+# Editor files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Test and coverage
+cover/
+.cover/
+logs/
+ct_logs/
+test/*.beam
+
+# Documentation
+doc/
+edoc/
+
+# Release artifacts
+rel/*/
+
+# Dependencies lock files can be included or excluded
+# Uncomment if you want to exclude:
+# rebar.lock
