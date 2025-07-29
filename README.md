@@ -1,6 +1,27 @@
-# Dynamic Supervisor - Erlang Port
+# Dynamic Supervisor
 
-This is an Erlang port of Elixir's DynamicSupervisor, maintaining a similar API while following Erlang conventions.
+[![Hex.pm](https://img.shields.io/hexpm/v/dynamic_supervisor.svg)](https://hex.pm/packages/dynamic_supervisor)
+[![License](https://img.shields.io/hexpm/l/dynamic_supervisor.svg)](https://github.com/longlene/dynamic_supervisor/blob/master/LICENSE)
+
+An Erlang library providing a supervisor optimized for dynamically spawning children. This is a port of Elixir's DynamicSupervisor, maintaining a similar API while following Erlang conventions.
+
+## Installation
+
+Add to your `rebar.config`:
+
+```erlang
+{deps, [
+    {dynamic_supervisor, "1.0.0"}
+]}.
+```
+
+Or for hex.pm:
+
+```erlang
+{deps, [
+    {dynamic_supervisor, {hex, dynamic_supervisor, "1.0.0"}}
+]}.
+```
 
 ## Overview
 

@@ -1,11 +1,13 @@
 {application, dynamic_supervisor,
- [{description, "A supervisor optimized for dynamically spawning children"},
-  {vsn, "0.0.1"},
+ [{description, "A supervisor optimized for dynamically spawning children. Erlang port of Elixir's DynamicSupervisor."},
+  {vsn, "1.0.0"},
   {registered, []},
   {applications, [kernel, stdlib]},
   {env, []},
   {modules, []},
-  {licenses, ["Apache 2.0"]},
-  {links, []},
-  {files, ["src", "test", "rebar.config", "README.md", "LICENSE"]}
+  {licenses, ["Apache-2.0"]},
+  {links, [{"GitHub", "https://github.com/longlene/dynamic_supervisor"}]},
+  {maintainers, ["longlene"]},
+  {files, ["src", "rebar.config", "README.md", "LICENSE"]},
+  {pkg_name, dynamic_supervisor}
  ]}.
