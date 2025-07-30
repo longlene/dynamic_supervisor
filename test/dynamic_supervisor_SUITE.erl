@@ -72,8 +72,7 @@ all() ->
 
 start_link_test(_Config) ->
     %% Test with name registration
-    {ok, Pid1} = dynamic_supervisor:start_link([
-        {name, {local, ct_test_sup1}},
+    {ok, Pid1} = dynamic_supervisor:start_link({local, ct_test_sup1}, [
         {strategy, one_for_one}
     ]),
     ?assert(is_pid(Pid1)),
@@ -321,6 +320,7 @@ max_children_test(_Config) ->
     ok.
 
 max_restarts_test(_Config) ->
+    process_flag(trap_exit, true),
     {ok, Sup} = dynamic_supervisor:start_link([
         {strategy, one_for_one},
         {max_restarts, 3},
@@ -342,26 +342,33 @@ max_restarts_test(_Config) ->
         restart => permanent
     }),
     
-    %% Kill it multiple times quickly
+    %% Kill it multiple times quickly to trigger max_restarts
     lists:foreach(fun(_) ->
-        case whereis(test_child) of
-            undefined ->
-                Children = dynamic_supervisor:which_children(Sup),
-                case Children of
-                    [{_, ChildPid, _, _}] when is_pid(ChildPid) ->
-                        exit(ChildPid, kill);
-                    _ ->
-                        ok
-                end;
-            _ ->
+        try
+            Children = dynamic_supervisor:which_children(Sup),
+            case Children of
+                [{_, ChildPid, _, _}] when is_pid(ChildPid) ->
+                    exit(ChildPid, kill),
+                    timer:sleep(50);
+                _ ->
+                    timer:sleep(50)
+            end
+        catch
+            exit:{noproc, _} ->
+                %% Supervisor has shut down due to max_restarts, which is expected
                 ok
-        end,
-        timer:sleep(50)
+        end
     end, lists:seq(1, 5)),
     
-    %% The supervisor might have shut down
+    %% Wait a bit more to ensure supervisor has shut down
     timer:sleep(200),
-    ok.
+    
+    %% Verify supervisor has shut down due to max_restarts
+    try dynamic_supervisor:which_children(Sup) of
+        _ -> ct:fail("Supervisor should have shut down due to max_restarts")
+    catch
+        exit:{noproc, _} -> ok  % This is expected
+    end.
 
 extra_arguments_test(_Config) ->
     ExtraArg = extra_config,

@@ -14,8 +14,7 @@
 %%% A dynamic supervisor is started with no children and often a name:
 %%%
 %%% ```
-%%% {ok, Pid} = dynamic_supervisor:start_link([
-%%%     {name, {local, my_dynamic_supervisor}},
+%%% {ok, Pid} = dynamic_supervisor:start_link({local, my_dynamic_supervisor}, [
 %%%     {strategy, one_for_one}
 %%% ]).
 %%% '''
@@ -77,11 +76,11 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, start_link/3]).
+-export([start_link/1, start_link/2, start_link/3, start_link/4]).
 -export([start_child/2, terminate_child/2]).
 -export([which_children/1, count_children/1]).
 -export([stop/1, stop/2, stop/3]).
--export([init_supervisor/1]).
+-export([]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -111,8 +110,7 @@
                        {max_seconds, pos_integer()} |
                        {max_children, non_neg_integer() | infinity} |
                        {extra_arguments, [term()]}.
--type start_option() :: {name, atom() | {local, atom()} | {global, atom()} | {via, module(), term()}} |
-                        {timeout, timeout()} |
+-type start_option() :: {timeout, timeout()} |
                         {debug, [sys:debug_option()]} |
                         {spawn_opt, [term()]}.
 
@@ -121,11 +119,11 @@
     name :: {pid(), module()} | {local, atom()} | {global, atom()} | {via, module(), term()},
     mod :: module(),
     args :: term(),
+    extra_arguments :: [term()],
     strategy :: strategy(),
     max_children :: non_neg_integer() | infinity,
     max_restarts :: non_neg_integer(),
     max_seconds :: pos_integer(),
-    extra_arguments :: [term()],
     children = #{} :: #{pid() => {Child :: tuple(), restart(), shutdown(), child_type(), modules()}},
     restarts = [] :: [integer()]
 }).
@@ -138,23 +136,13 @@
 %% API functions
 %%====================================================================
 
-%% @doc Starts a supervisor with the given options.
-%%
-%% This function is typically not invoked directly, instead it is invoked
-%% when using a dynamic_supervisor as a child of another supervisor.
-%%
-%% If the supervisor is successfully spawned, this function returns
-%% `{ok, Pid}', where `Pid' is the PID of the supervisor. If the supervisor
-%% is given a name and a process with the specified name already exists,
-%% the function returns `{error, {already_started, Pid}}', where `Pid'
-%% is the PID of that process.
+%% @doc Starts a dynamic supervisor with the given options.
 %%
 %% Options:
 %% <ul>
-%% <li>`{name, Name}' - registers the supervisor under the given name.</li>
 %% <li>`{strategy, Strategy}' - the restart strategy option. The only supported
 %%     value is `one_for_one' which means that no other child is
-%%     terminated if a child process terminates.</li>
+%%     terminated if a child process terminates. Defaults to `one_for_one'.</li>
 %% <li>`{max_restarts, MaxRestarts}' - the maximum number of restarts allowed in
 %%     a time frame. Defaults to `3'.</li>
 %% <li>`{max_seconds, MaxSeconds}' - the time frame in which `max_restarts' applies.
@@ -168,22 +156,42 @@
 %%     an empty list.</li>
 %% </ul>
 %% @end
--spec start_link([init_option() | start_option()]) -> {ok, pid()} | ignore | {error, term()}.
+-spec start_link([init_option()]) -> {ok, pid()} | ignore | {error, term()}.
 start_link(Options) when is_list(Options) ->
-    Keys = [extra_arguments, max_children, max_seconds, max_restarts, strategy],
-    {SupOpts, StartOpts} = lists:partition(fun({K, _}) -> lists:member(K, Keys) end, Options),
-    start_link(dynamic_supervisor_default, init_supervisor(SupOpts), StartOpts).
+    start_link(?MODULE, Options, []).
 
-%% @doc Starts a module-based supervisor process with the given `Module' and `InitArg'.
+%% @doc Starts a named dynamic supervisor with the given options.
 %%
-%% To start the supervisor, the `init/1' callback will be invoked in the given
-%% `Module', with `InitArg' as its argument. The `init/1' callback must return a
-%% supervisor specification which can be created with the help of the `init/1'
-%% function.
+%% This is the most common way to start a dynamic supervisor in Erlang style.
+%% The `Name' parameter follows standard Erlang naming conventions.
+%%
+%% Examples:
+%% ```
+%% %% Local registration
+%% {ok, Pid} = dynamic_supervisor:start_link({local, my_supervisor}, []).
+%% 
+%% %% Global registration  
+%% {ok, Pid} = dynamic_supervisor:start_link({global, my_supervisor}, []).
+%% 
+%% %% Via registration
+%% {ok, Pid} = dynamic_supervisor:start_link({via, Registry, {MyReg, key}}, []).
+%% '''
 %% @end
+-spec start_link(Name, [init_option()]) -> {ok, pid()} | ignore | {error, term()} when
+    Name :: {local, atom()} | {global, atom()} | {via, module(), term()}.
+start_link(Name, Options) when is_list(Options) ->
+    start_link(Name, ?MODULE, Options, []).
+
+%% @doc Starts an unnamed module-based supervisor process.
 -spec start_link(module(), term(), [start_option()]) -> {ok, pid()} | ignore | {error, term()}.
 start_link(Module, InitArg, Opts) ->
-    gen_server:start_link(?MODULE, {Module, InitArg, proplists:get_value(name, Opts)}, Opts).
+    gen_server:start_link(?MODULE, {Module, InitArg, undefined}, Opts).
+
+%% @doc Starts a named module-based supervisor process.
+-spec start_link(Name, module(), term(), [start_option()]) -> {ok, pid()} | ignore | {error, term()} when
+    Name :: {local, atom()} | {global, atom()} | {via, module(), term()}.
+start_link(Name, Module, InitArg, Opts) ->
+    gen_server:start_link(Name, ?MODULE, {Module, InitArg, Name}, Opts).
 
 %% @doc Dynamically adds a child specification to `Supervisor' and starts that child.
 %%
@@ -302,22 +310,13 @@ stop(Supervisor, Reason) ->
 stop(Supervisor, Reason, Timeout) ->
     gen_server:stop(Supervisor, Reason, Timeout).
 
-%% @doc Receives a set of `Options' that initializes a dynamic supervisor.
-%%
-%% This is typically invoked at the end of the `init/1' callback of
-%% module-based supervisors.
-%%
-%% It accepts the same `Options' as `start_link/1' (except for `name')
-%% and it returns a tuple containing the supervisor options.
-%%
-%% Example:
-%% ```
-%% init(_Arg) ->
-%%     dynamic_supervisor:init_supervisor([{max_children, 1000}]).
-%% '''
-%% @end
--spec init_supervisor([init_option()]) -> {ok, sup_flags()}.
-init_supervisor(Options) when is_list(Options) ->
+
+%%====================================================================
+%% gen_server callbacks
+%%====================================================================
+
+%% Default init/1 callback for ?MODULE
+init(Options) when is_list(Options) ->
     Strategy = proplists:get_value(strategy, Options, one_for_one),
     Intensity = proplists:get_value(max_restarts, Options, 3),
     Period = proplists:get_value(max_seconds, Options, 5),
@@ -332,11 +331,7 @@ init_supervisor(Options) when is_list(Options) ->
         extra_arguments => ExtraArguments
     },
     
-    {ok, Flags}.
-
-%%====================================================================
-%% gen_server callbacks
-%%====================================================================
+    {ok, Flags};
 
 %% @private
 init({Mod, InitArg, Name}) ->

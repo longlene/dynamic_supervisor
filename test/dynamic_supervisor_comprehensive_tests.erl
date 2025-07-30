@@ -106,8 +106,8 @@ dynamic_supervisor_comprehensive_test_() ->
 %%====================================================================
 
 test_basic_functionality() ->
-    %% Can be supervised directly
-    {ok, DynSup} = dynamic_supervisor:start_link([{name, {local, dyn_sup_spec_test}}]),
+    %% Can be supervised directly - using new Erlang-style API
+    {ok, DynSup} = dynamic_supervisor:start_link({local, dyn_sup_spec_test}, []),
     timer:sleep(100),  % Give time for registration
     ?assertEqual([], dynamic_supervisor:which_children(DynSup)),
     ?assertMatch(#{specs := 0, active := 0}, dynamic_supervisor:count_children(DynSup)),
@@ -128,7 +128,7 @@ test_init_supervisor_options() ->
                  period => 5,
                  max_children => infinity,
                  extra_arguments => []},
-    ?assertEqual({ok, Expected}, dynamic_supervisor:init_supervisor([])).
+    ?assertEqual({ok, Expected}, dynamic_supervisor:init([])).
 
 test_start_link_invalid_options() ->
     process_flag(trap_exit, true),
@@ -162,7 +162,7 @@ test_start_link_invalid_options() ->
 
 test_start_child_old_spec() ->
     {ok, Pid} = dynamic_supervisor:start_link([{strategy, one_for_one}]),
-    Child = {timer_task, {timer, sleep, [infinity]}, temporary, 5000, worker, [timer]},
+    Child = {timer_task, {sleepy_proc, start_link, []}, temporary, 5000, worker, [sleepy_proc]},
     {ok, ChildPid} = dynamic_supervisor:start_child(Pid, Child),
     ?assert(is_pid(ChildPid)),
     dynamic_supervisor:stop(Pid).

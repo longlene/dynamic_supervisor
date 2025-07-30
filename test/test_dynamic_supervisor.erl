@@ -16,9 +16,8 @@ test_all() ->
 test_basic() ->
     io:format("~n=== Basic Functionality Test ===~n"),
     
-    %% Start a dynamic supervisor
-    {ok, Sup} = dynamic_supervisor:start_link([
-        {name, {local, test_supervisor}},
+    %% Start a dynamic supervisor with name as first parameter
+    {ok, Sup} = dynamic_supervisor:start_link({local, test_supervisor}, [
         {strategy, one_for_one},
         {max_restarts, 3},
         {max_seconds, 5}
@@ -71,8 +70,7 @@ test_restart_strategies() ->
     io:format("~n=== Restart Strategies Test ===~n"),
     
     %% Start supervisor
-    {ok, _Sup} = dynamic_supervisor:start_link([
-        {name, {local, restart_test_sup}},
+    {ok, _Sup} = dynamic_supervisor:start_link({local, restart_test_sup}, [
         {strategy, one_for_one},
         {max_restarts, 5},
         {max_seconds, 10}
@@ -133,8 +131,7 @@ test_max_children() ->
     io:format("~n=== Max Children Test ===~n"),
     
     %% Start supervisor with max_children limit
-    {ok, _Sup} = dynamic_supervisor:start_link([
-        {name, {local, limited_sup}},
+    {ok, _Sup} = dynamic_supervisor:start_link({local, limited_sup}, [
         {strategy, one_for_one},
         {max_children, 3}
     ]),

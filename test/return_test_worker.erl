@@ -2,9 +2,9 @@
 -export([start_link/1]).
 
 start_link(ok3) ->
-    {ok, spawn_link(fun() -> timer:sleep(infinity) end), extra};
+    {ok, spawn_link(fun() -> timer:sleep(60000) end), extra};
 start_link(ok2) ->
-    {ok, spawn_link(fun() -> timer:sleep(infinity) end)};
+    {ok, spawn_link(fun() -> timer:sleep(60000) end)};
 start_link(error) ->
     {error, found};
 start_link(ignore) ->

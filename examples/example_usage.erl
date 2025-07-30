@@ -5,10 +5,9 @@
 demo() ->
     io:format("=== Dynamic Supervisor Example Usage ===~n~n"),
     
-    %% Start a dynamic supervisor
+    %% Start a dynamic supervisor with Erlang-style API
     io:format("1. Starting dynamic supervisor...~n"),
-    {ok, _SupPid} = dynamic_supervisor:start_link([
-        {name, {local, my_app_dynamic_supervisor}},
+    {ok, _SupPid} = dynamic_supervisor:start_link({local, my_app_dynamic_supervisor}, [
         {strategy, one_for_one},
         {max_restarts, 3},
         {max_seconds, 5}
@@ -51,8 +50,7 @@ demo() ->
     
     %% Demonstrate extra_arguments feature
     io:format("~n5. Using extra_arguments feature...~n"),
-    {ok, _SupWithExtra} = dynamic_supervisor:start_link([
-        {name, {local, sup_with_extra}},
+    {ok, _SupWithExtra} = dynamic_supervisor:start_link({local, sup_with_extra}, [
         {strategy, one_for_one},
         {extra_arguments, [shared_config]}
     ]),
